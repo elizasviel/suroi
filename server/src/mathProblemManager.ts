@@ -3,6 +3,7 @@ import { HealingItems } from "@common/definitions/items/healingItems";
 import { Throwables } from "@common/definitions/items/throwables";
 import { type MathProblemData } from "@common/packets/mathProblemPacket";
 import { random, randomFloat } from "@common/utils/random";
+import { DefinitionType } from "@common/utils/objectDefinitions";
 import { type Player } from "./objects/player";
 
 export interface MathProblem {
@@ -100,9 +101,23 @@ export class MathProblemManager {
         
         if (isCorrect) {
             // Award the player the consumable
-            const currentAmount = player.inventory.items.getItem(activeProblem.rewardType);
-            player.inventory.items.setItem(activeProblem.rewardType, currentAmount + activeProblem.rewardCount);
+            const rewardType = activeProblem.rewardType;
+            const currentAmount = player.inventory.items.getItem(rewardType);
+            player.inventory.items.setItem(rewardType, currentAmount + activeProblem.rewardCount);
             player.dirty.items = true;
+
+            // If it's a throwable, we need to ensure it's equipped if no other throwable is active
+            if (rewardType === "frag_grenade" || rewardType === "smoke_grenade") {
+                try {
+                    const throwableSlot = player.inventory.slotsByDefType[DefinitionType.Throwable]?.[0];
+                    if (throwableSlot !== undefined && !player.inventory.weapons[throwableSlot]) {
+                        player.inventory.useItem(rewardType);
+                    }
+                } catch (e) {
+                    // Ignore errors with throwable equipment
+                    console.log("Error equipping throwable:", e);
+                }
+            }
             
             // Remove the problem and generate a new one
             this.activeProblem.delete(player.id);

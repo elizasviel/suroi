@@ -1713,7 +1713,7 @@ class UIManagerClass {
     showMathProblem(data: import("@common/packets/mathProblemPacket").MathProblemData): void {
         const questionElement = $("#math-problem-question");
         const rewardCountElement = $("#math-reward-count");
-        const rewardTypeElement = $("#math-reward-type");
+        const rewardImageElement = $("#math-reward-image");
         const answerInput = $("#math-answer-input") as JQuery<HTMLInputElement>;
         const submitButton = $("#math-submit-button");
         const panel = $("#math-problem-panel");
@@ -1721,7 +1721,10 @@ class UIManagerClass {
         // Update the problem display
         questionElement.text(data.problem);
         rewardCountElement.text(data.rewardCount.toString());
-        rewardTypeElement.text(data.rewardType);
+        
+        // Set the reward image based on the item type
+        const rewardImagePath = this.getItemImagePath(data.rewardType);
+        rewardImageElement.attr("src", rewardImagePath);
 
         // Store the problem ID for when submitting
         panel.attr("data-problem-id", data.problemId.toString());
@@ -1729,11 +1732,29 @@ class UIManagerClass {
         // Clear the input field
         answerInput.val("");
 
-        // Show the panel
+        // Show the panel (don't auto-focus, let user click to focus)
         panel.show();
+    }
 
-        // Focus on the input field
-        answerInput.focus();
+    private getItemImagePath(itemType: string): string {
+        // Map item IDs to their image paths
+        const itemImageMap: Record<string, string> = {
+            // Healing items
+            "gauze": "./img/game/shared/loot/gauze.svg",
+            "medikit": "./img/game/shared/loot/medikit.svg", 
+            "cola": "./img/game/shared/loot/cola.svg",
+            "tablets": "./img/game/shared/loot/tablets.svg",
+            // Ammo types
+            "12g": "./img/game/shared/loot/12g.svg",
+            "556mm": "./img/game/shared/loot/556mm.svg", 
+            "762mm": "./img/game/shared/loot/762mm.svg",
+            "9mm": "./img/game/shared/loot/9mm.svg",
+            // Throwables (stored in weapons folder)
+            "frag_grenade": "./img/game/shared/weapons/frag_grenade.svg",
+            "smoke_grenade": "./img/game/shared/weapons/smoke_grenade.svg"
+        };
+
+        return itemImageMap[itemType] || "./img/game/shared/loot/gauze.svg";
     }
 
     initializeMathProblemHandlers(): void {
@@ -1745,20 +1766,83 @@ class UIManagerClass {
 
             // Remove any existing handlers to prevent duplicates
             submitButton.off("click.mathProblem");
-            answerInput.off("keypress.mathProblem");
+            answerInput.off("keypress.mathProblem keydown.mathProblem focus.mathProblem blur.mathProblem");
+            panel.off("click.mathProblem");
+            $(document).off("click.mathProblem");
+
+            // Handle panel focus management
+            panel.on("click.mathProblem", (e) => {
+                e.stopPropagation();
+                this.focusMathPanel();
+            });
+
+            // Handle clicking outside to unfocus
+            $(document).on("click.mathProblem", (e) => {
+                if (!panel.is(e.target) && panel.has(e.target as Element).length === 0) {
+                    this.unfocusMathPanel();
+                }
+            });
+
+            // Simple focus/unfocus without triggering more events
+            answerInput.on("focus.mathProblem", () => {
+                InputManager.isMathPanelFocused = true;
+                panel.addClass("focused");
+            });
+
+            answerInput.on("blur.mathProblem", () => {
+                // Small delay to allow for button clicks
+                setTimeout(() => {
+                    if (!answerInput.is(":focus")) {
+                        InputManager.isMathPanelFocused = false;
+                        panel.removeClass("focused");
+                    }
+                }, 150);
+            });
 
             // Handle submit button click
-            submitButton.on("click.mathProblem", () => {
+            submitButton.on("click.mathProblem", (e) => {
+                e.preventDefault();
                 this.submitMathAnswer();
             });
 
             // Handle Enter key in input field
             answerInput.on("keypress.mathProblem", (e) => {
                 if (e.which === 13) { // Enter key
+                    e.preventDefault();
                     this.submitMathAnswer();
                 }
             });
+
+            // Handle Escape key to unfocus
+            answerInput.on("keydown.mathProblem", (e) => {
+                if (e.which === 27) { // Escape key
+                    e.preventDefault();
+                    this.unfocusMathPanel();
+                    answerInput.blur();
+                }
+            });
         }, 100);
+    }
+
+    private focusMathPanel(): void {
+        const answerInput = $("#math-answer-input") as JQuery<HTMLInputElement>;
+        
+        // Simple focus without triggering events
+        if (!answerInput.is(":focus")) {
+            answerInput[0]?.focus();
+        }
+    }
+
+    private unfocusMathPanel(): void {
+        const answerInput = $("#math-answer-input") as JQuery<HTMLInputElement>;
+        
+        // Simple unfocus
+        if (answerInput.is(":focus")) {
+            answerInput[0]?.blur();
+        }
+        
+        InputManager.isMathPanelFocused = false;
+        $("#math-problem-panel").removeClass("focused");
     }
 
     async submitMathAnswer(): Promise<void> {

@@ -185,6 +185,8 @@ class InputManagerClass {
     readonly binds = new InputMapper();
 
     readonly isMobile!: boolean;
+    
+    isMathPanelFocused = false;
 
     readonly movement = {
         up: false,
@@ -544,6 +546,9 @@ class InputManagerClass {
         // If the user is interacting with a text field or something of the sort, inputs should
         // not be honored
         if (document.activeElement !== document.body) return;
+
+        // Don't process game inputs when math panel is focused
+        if (this.isMathPanelFocused) return;
 
         const { type } = event;
 
