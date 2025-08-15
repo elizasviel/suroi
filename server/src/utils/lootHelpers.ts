@@ -17,6 +17,7 @@ import { LootTables } from "../data/lootTables";
 import { MapDefinition } from "../data/maps";
 import { BuildingDefinition, Buildings } from "@common/definitions/buildings";
 import { ObstacleDefinition, Obstacles } from "@common/definitions/obstacles";
+import { MathProblemManager } from "../mathProblemManager";
 
 export type WeightedItem =
     (
@@ -68,7 +69,7 @@ export function getLootFromTable(modeName: ModeName, tableID: string): LootItem[
             ? { ...lootTable, loot: Array.from(lootTable.loot) } // cloning the array is necessary because noDuplicates mutates it
             : lootTable;
 
-    return (
+    const generatedLoot = (
         isSimple && isArray(loot[0])
             ? (loot as readonly WeightedItem[][]).map(innerTable => getLoot(modeName, innerTable))
             : min === 1 && max === 1
@@ -78,6 +79,9 @@ export function getLootFromTable(modeName: ModeName, tableID: string): LootItem[
                     () => getLoot(modeName, loot as WeightedItem[], noDuplicates)
                 )
     ).flat();
+
+    // Filter out consumables - they can only be obtained through math problems
+    return generatedLoot.filter(item => !MathProblemManager.isConsumable(item.idString));
 }
 
 export function resolveTable(modeName: ModeName, tableID: string): LootTable {

@@ -10,6 +10,7 @@ import { Throwables, type ThrowableDefinition } from "@common/definitions/items/
 import { Numeric } from "@common/utils/math";
 import { ExtendedMap, type AbstractConstructor, type GetEnumMemberName, type PredicateFor, type Timeout } from "@common/utils/misc";
 import { DefinitionType, type ReferenceTo, type ReifiableDef } from "@common/utils/objectDefinitions";
+import { MathProblemManager } from "../mathProblemManager";
 import { type ItemData } from "../objects/loot";
 import { type Player } from "../objects/player";
 import { HealingAction } from "./action";
@@ -578,6 +579,7 @@ export class Inventory {
                 && defType !== DefinitionType.Perk
             )
             || definition.noDrop
+            || MathProblemManager.isConsumable(idString) // Prevent dropping consumables
         ) return;
 
         switch (defType) {

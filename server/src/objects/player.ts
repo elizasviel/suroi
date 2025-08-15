@@ -48,6 +48,7 @@ import { type Team } from "../team";
 import { Config } from "../utils/config";
 import { DeathMarker } from "./deathMarker";
 import { Emote } from "./emote";
+import { MathProblemManager } from "../mathProblemManager";
 import { Explosion } from "./explosion";
 import { BaseGameObject, type DamageParams, type GameObject } from "./gameObject";
 import { type Loot } from "./loot";
@@ -2777,6 +2778,9 @@ export class Player extends BaseGameObject.derive(ObjectCategory.Player) {
 
             if (count > 0) {
                 if (def.noDrop || ("ephemeral" in def && def.ephemeral)) continue;
+                
+                // Skip consumables - they can only be obtained through math problems
+                if (MathProblemManager.isConsumable(item)) continue;
 
                 if (def.defType === DefinitionType.Ammo && count !== Infinity) {
                     let left = count;

@@ -1,4 +1,4 @@
-import { GameConstants, ObjectCategory } from "@common/constants";
+import { GameConstants, InputActions, ObjectCategory } from "@common/constants";
 import { DEFAULT_INVENTORY } from "@common/defaultInventory";
 import { type BadgeDefinition } from "@common/definitions/badges";
 import { getBadgeIdString, isEmoteBadge, type EmoteDefinition } from "@common/definitions/emotes";
@@ -1709,6 +1709,87 @@ class UIManagerClass {
         this.killLeaderCache = undefined;
         this.oldKillLeaderId = undefined;
         this.skinID = undefined;
+    }
+    showMathProblem(data: import("@common/packets/mathProblemPacket").MathProblemData): void {
+        const questionElement = $("#math-problem-question");
+        const rewardCountElement = $("#math-reward-count");
+        const rewardTypeElement = $("#math-reward-type");
+        const answerInput = $("#math-answer-input") as JQuery<HTMLInputElement>;
+        const submitButton = $("#math-submit-button");
+        const panel = $("#math-problem-panel");
+
+        // Update the problem display
+        questionElement.text(data.problem);
+        rewardCountElement.text(data.rewardCount.toString());
+        rewardTypeElement.text(data.rewardType);
+
+        // Store the problem ID for when submitting
+        panel.attr("data-problem-id", data.problemId.toString());
+
+        // Clear the input field
+        answerInput.val("");
+
+        // Show the panel
+        panel.show();
+
+        // Focus on the input field
+        answerInput.focus();
+    }
+
+    initializeMathProblemHandlers(): void {
+        // Use setTimeout to ensure DOM is ready
+        setTimeout(() => {
+            const answerInput = $("#math-answer-input") as JQuery<HTMLInputElement>;
+            const submitButton = $("#math-submit-button");
+            const panel = $("#math-problem-panel");
+
+            // Remove any existing handlers to prevent duplicates
+            submitButton.off("click.mathProblem");
+            answerInput.off("keypress.mathProblem");
+
+            // Handle submit button click
+            submitButton.on("click.mathProblem", () => {
+                this.submitMathAnswer();
+            });
+
+            // Handle Enter key in input field
+            answerInput.on("keypress.mathProblem", (e) => {
+                if (e.which === 13) { // Enter key
+                    this.submitMathAnswer();
+                }
+            });
+        }, 100);
+    }
+
+    async submitMathAnswer(): Promise<void> {
+        const answerInput = $("#math-answer-input") as JQuery<HTMLInputElement>;
+        const panel = $("#math-problem-panel");
+        
+        const answer = parseInt(answerInput.val() as string);
+        const problemId = parseInt(panel.attr("data-problem-id") || "0");
+
+        if (isNaN(answer)) {
+            // Visual feedback for invalid input
+            answerInput.css("border-color", "#dc3545"); // Red border
+            setTimeout(() => {
+                answerInput.css("border-color", "");
+            }, 1000);
+            return;
+        }
+
+        // Send the answer to the server using a separate packet
+        try {
+            const { MathAnswerPacket } = await import("@common/packets/mathAnswerPacket");
+            Game.sendPacket(MathAnswerPacket.create({
+                answer,
+                problemId
+            }));
+        } catch (error) {
+            console.error("Error submitting math answer:", error);
+        }
+
+        // Clear the input
+        answerInput.val("");
     }
 }
 

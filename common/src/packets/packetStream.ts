@@ -5,6 +5,8 @@ import { JoinPacket } from "./joinPacket";
 import { JoinedPacket } from "./joinedPacket";
 import { KillPacket } from "./killPacket";
 import { MapPacket } from "./mapPacket";
+import { MathAnswerPacket } from "./mathAnswerPacket";
+import { MathProblemPacket } from "./mathProblemPacket";
 import { DataSplit, MutablePacketDataIn, PacketDataOut } from "./packet";
 import { PickupPacket } from "./pickupPacket";
 import { ReportPacket } from "./reportPacket";
@@ -21,7 +23,9 @@ export const Packets = [
     PickupPacket,
     ReportPacket,
     SpectatePacket,
-    UpdatePacket
+    UpdatePacket,
+    MathProblemPacket,
+    MathAnswerPacket
 ] as const;
 
 export class PacketStream {

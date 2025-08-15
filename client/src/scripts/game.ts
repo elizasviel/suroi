@@ -8,6 +8,7 @@ import type { ColorKeys, ModeDefinition, ModeName } from "@common/definitions/mo
 import { Modes } from "@common/definitions/modes";
 import type { JoinedData } from "@common/packets/joinedPacket";
 import { JoinPacket } from "@common/packets/joinPacket";
+import { type MathProblemData } from "@common/packets/mathProblemPacket";
 import { PacketType, type DataSplit, type PacketDataIn, type PacketDataOut } from "@common/packets/packet";
 import { PacketStream } from "@common/packets/packetStream";
 import { type UpdateDataOut } from "@common/packets/updatePacket";
@@ -212,6 +213,13 @@ export const Game = new (class Game {
         MapManager.init();
         CameraManager.init();
         GasManager.init();
+        
+        // Initialize math problem handlers after other UI components are ready
+        try {
+            UIManager.initializeMathProblemHandlers();
+        } catch (error) {
+            console.error("Error initializing math problem handlers:", error);
+        }
 
         const initPixi = async(): Promise<void> => {
             const renderMode = GameConsole.getBuiltInCVar("cv_renderer");
@@ -570,6 +578,9 @@ export const Game = new (class Game {
                 }
                 break;
             }
+            case PacketType.MathProblem:
+                UIManager.showMathProblem(packet as MathProblemData);
+                break;
         }
     }
 

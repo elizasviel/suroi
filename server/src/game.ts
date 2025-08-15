@@ -51,6 +51,8 @@ import { IDAllocator } from "./utils/idAllocator";
 import { Cache, getAllLoots, getSpawnableLoots, ItemRegistry } from "./utils/lootHelpers";
 import { cleanUsername, modeFromMap } from "./utils/misc";
 import { MapIndicator } from "./objects/mapIndicator";
+import { MathProblemManager } from "./mathProblemManager";
+import { MathProblemPacket } from "@common/packets/mathProblemPacket";
 
 export class Game implements GameData {
     public readonly id: number;
@@ -59,6 +61,8 @@ export class Game implements GameData {
     readonly gas: Gas;
     readonly grid: Grid;
     readonly pluginManager = new PluginManager(this);
+    readonly mathProblemManager = new MathProblemManager();
+    readonly mathProblemPacket = MathProblemPacket;
 
     readonly modeName: ModeName;
     readonly mode: ModeDefinition;
@@ -295,6 +299,12 @@ export class Game implements GameData {
                     break;
                 case PacketType.Spectate:
                     player.spectate(packet);
+                    break;
+                case PacketType.MathAnswer:
+                    // Ignore math answer packets from players that haven't finished joining or dead players
+                    if (!player.joined || player.dead) break;
+                    const isCorrect = this.mathProblemManager.validateAnswer(player, packet.answer, packet.problemId);
+                    // Could add feedback here if needed
                     break;
             }
         }
@@ -768,6 +778,9 @@ export class Game implements GameData {
 
         player.joined = true;
 
+        // Initialize math problem for the new player
+        this.mathProblemManager.initializeProblem(player);
+
         player.sendPacket(
             JoinedPacket.create(
                 {
@@ -825,6 +838,9 @@ export class Game implements GameData {
         player.disconnected = true;
         this.aliveCountDirty = true;
         this.connectedPlayers.delete(player);
+
+        // Clean up math problem for the disconnected player
+        this.mathProblemManager.removeProblem(player);
 
         this.log(`"${player.name}" left`);
 
