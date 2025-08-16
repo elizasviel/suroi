@@ -7,6 +7,7 @@
     "build:client": "cd client && pnpm build",
     "build:server": "cd server && pnpm build",
     "start": "cd server && pnpm start",
+    "heroku-postbuild": "pnpm build",
     "dev": "pnpm -r dev",
     "dev:client": "cd client && pnpm dev",
     "dev:server": "cd server && pnpm dev",
