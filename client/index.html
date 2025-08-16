@@ -120,6 +120,74 @@
           transform: rotate(360deg);
         }
       }
+
+      /* TimeBack Authentication Styles */
+      #auth-screen {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.9);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #auth-container {
+        background: rgba(61, 62, 72, 0.95);
+        border: 2px solid #008af0;
+        border-radius: 12px;
+        padding: 40px;
+        text-align: center;
+        min-width: 400px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      }
+
+      #auth-content h2 {
+        color: #fff;
+        font-size: 24px;
+        margin: 0 0 10px 0;
+        font-weight: 600;
+      }
+
+      #auth-content p {
+        color: #ccc;
+        font-size: 16px;
+        margin: 0 0 20px 0;
+      }
+
+      #auth-container .btn {
+        margin: 5px;
+        padding: 12px 24px;
+        font-size: 16px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      #auth-container .btn-primary {
+        background: #008af0;
+        color: white;
+      }
+
+      #auth-container .btn-primary:hover {
+        background: #0076d1;
+      }
+
+      #auth-container .btn-secondary {
+        background: #666;
+        color: white;
+      }
+
+      #auth-container .btn-secondary:hover {
+        background: #777;
+      }
     </style>
   </head>
 
@@ -182,6 +250,45 @@
           <!-- Displays a message telling the user to rotate their device to landscape if it's in portrait -->
           <div id="splash-rotate-message" style="display: none">
             <i class="fa-solid fa-rotate"></i> <span translation="msg_rotate"></span>
+          </div>
+
+          <!-- TimeBack Authentication Screen -->
+          <div id="auth-screen" style="display: none;">
+            <div id="auth-container">
+              <div id="auth-logo">
+                <img src="./img/logos/suroi_beta.svg" alt="Suroi logo" draggable="false" style="height: 80px; margin-bottom: 20px;" />
+              </div>
+              <div id="auth-content">
+                <h2>Sign in to play Suroi</h2>
+                <p>TimeBack authentication required to access the game</p>
+                <div id="auth-status" style="margin: 15px 0; color: #ffa500; display: none;">
+                  <i class="fa-solid fa-spinner fa-spin"></i>
+                  <span id="auth-status-text">Connecting to TimeBack...</span>
+                </div>
+                <div id="auth-error" style="margin: 15px 0; color: #ff4444; display: none;">
+                  <i class="fa-solid fa-exclamation-triangle"></i>
+                  <span id="auth-error-text">Authentication failed</span>
+                </div>
+                <button id="timeback-login" class="btn btn-lg btn-primary">
+                  <i class="fa-solid fa-sign-in-alt"></i>
+                  Sign in with TimeBack
+                </button>
+                <div id="auth-user-info" style="display: none; margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                  <div style="color: #00ff00; margin-bottom: 10px;">
+                    <i class="fa-solid fa-check-circle"></i>
+                    <strong>Authenticated</strong>
+                  </div>
+                  <div id="auth-user-details" style="font-size: 14px; color: #ccc;"></div>
+                  <button id="auth-continue" class="btn btn-primary" style="margin-top: 10px;">
+                    Continue to Game
+                  </button>
+                  <button id="auth-logout" class="btn btn-secondary" style="margin-top: 10px; margin-left: 10px;">
+                    <i class="fa-solid fa-sign-out-alt"></i>
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Username field, server selector, play buttons, & rules button -->
@@ -592,15 +699,34 @@
         <div id="math-problem-panel">
           <div id="math-problem-header">Math Challenge</div>
           <div id="math-problem-question"></div>
-          <div id="math-problem-reward">
+          <div id="math-problem-rewards">
             <div id="math-reward-container">
               <img id="math-reward-image" src="" alt="Reward" />
               <span id="math-reward-count"></span>
+            </div>
+            <div id="math-xp-reward" style="margin-left: 10px; color: #ffaa00;">
+              <i class="fa-solid fa-star"></i>
+              <span id="math-xp-amount">+5 XP</span>
             </div>
           </div>
           <div id="math-problem-input-container">
             <input type="number" id="math-answer-input" placeholder="Answer" />
             <button id="math-submit-button">✓</button>
+          </div>
+        </div>
+
+        <!-- XP Notification (appears when XP is awarded) -->
+        <div id="xp-notification" style="display: none;">
+          <i class="fa-solid fa-star"></i>
+          <span id="xp-notification-text">+5 XP Earned!</span>
+        </div>
+
+        <!-- TimeBack XP Display -->
+        <div id="timeback-xp-display" style="display: none;">
+          <div id="timeback-xp-container">
+            <i class="fa-solid fa-graduation-cap"></i>
+            <span id="timeback-xp-label">TimeBack XP:</span>
+            <span id="timeback-xp-value">0</span>
           </div>
         </div>
 

@@ -97,6 +97,10 @@ type Colors = Record<ColorKeys | "ghillie", Color>;
 export const Game = new (class Game {
     private _socket?: WebSocket;
 
+    // TimeBack authentication data
+    timeBackAuthToken?: string;
+    timeBackStudentId?: string;
+
     socketCloseCallback?: (value: unknown) => void;
 
     readonly objects = new ObjectPool<ObjectMapping>();
@@ -208,12 +212,21 @@ export const Game = new (class Game {
         await initTranslation();
         InputManager.init();
         await setUpUI();
+
+        // Initialize TimeBack authentication
+        try {
+            const { suroiAuthUI } = await import("./timeBack/authUI");
+            await suroiAuthUI.initialize();
+        } catch (error) {
+            console.error("Error initializing TimeBack authentication:", error);
+        }
+
         await fetchServerData();
         this.gasRender = new GasRender(PIXI_SCALE);
         MapManager.init();
         CameraManager.init();
         GasManager.init();
-        
+
         // Initialize math problem handlers after other UI components are ready
         try {
             UIManager.initializeMathProblemHandlers();
@@ -362,6 +375,16 @@ export const Game = new (class Game {
         this.riverAmbience.volume = riverWeight;
     }
 
+    // Set TimeBack authentication data
+    setTimeBackAuth(authToken: string | undefined, studentId: string | undefined): void {
+        this.timeBackAuthToken = authToken;
+        this.timeBackStudentId = studentId;
+        console.log("TimeBack auth data set:", {
+            hasToken: !!authToken,
+            studentId: studentId ? `${studentId.substring(0, 8)}...` : undefined
+        });
+    }
+
     connect(address: string): void {
         this.error = false;
 
@@ -406,7 +429,10 @@ export const Game = new (class Game {
                 badge: Badges.fromStringSafe(GameConsole.getBuiltInCVar("cv_loadout_badge")),
                 emotes: EMOTE_SLOTS.map(
                     slot => Emotes.fromStringSafe(GameConsole.getBuiltInCVar(`cv_loadout_${slot}_emote`))
-                )
+                ),
+                // Include TimeBack authentication data if available
+                authToken: this.timeBackAuthToken,
+                studentId: this.timeBackStudentId
             }));
 
             this.gasRender.graphics.zIndex = 1000;
@@ -579,7 +605,10 @@ export const Game = new (class Game {
                 break;
             }
             case PacketType.MathProblem:
-                UIManager.showMathProblem(packet as MathProblemData);
+                UIManager.showMathProblem(packet);
+                break;
+            case PacketType.MathFeedback:
+                UIManager.handleMathFeedback(packet);
                 break;
         }
     }

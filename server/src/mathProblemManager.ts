@@ -1,17 +1,14 @@
-import { Ammos } from "@common/definitions/items/ammos";
-import { HealingItems } from "@common/definitions/items/healingItems";
-import { Throwables } from "@common/definitions/items/throwables";
-import { type MathProblemData } from "@common/packets/mathProblemPacket";
-import { random, randomFloat } from "@common/utils/random";
+import { random } from "@common/utils/random";
 import { DefinitionType } from "@common/utils/objectDefinitions";
 import { type Player } from "./objects/player";
+import { serverTimeBackAPI } from "./timeBack/timeBackAPI";
 
 export interface MathProblem {
-    readonly problem: string;
-    readonly answer: number;
-    readonly rewardType: string;
-    readonly rewardCount: number;
-    readonly problemId: number;
+    readonly problem: string
+    readonly answer: number
+    readonly rewardType: string
+    readonly rewardCount: number
+    readonly problemId: number
 }
 
 export class MathProblemManager {
@@ -22,12 +19,12 @@ export class MathProblemManager {
     private readonly consumableItems = [
         // Healing items
         "gauze",
-        "medikit", 
+        "medikit",
         "cola",
         "tablets",
         // Ammo types
         "12g",
-        "556mm", 
+        "556mm",
         "762mm",
         "9mm",
         // Throwables
@@ -40,26 +37,29 @@ export class MathProblemManager {
         const num1 = random(1, 9);
         const num2 = random(1, 9);
         const operation = random(0, 3); // 0=+, 1=-, 2=*, 3=/
-        
+
         let problem: string;
         let answer: number;
 
         switch (operation) {
-            case 0: // Addition
+            case 0: {// Addition
                 problem = `${num1} + ${num2}`;
                 answer = num1 + num2;
                 break;
-            case 1: // Subtraction
+            }
+            case 1: {// Subtraction
                 // Ensure positive result
                 const [larger, smaller] = num1 >= num2 ? [num1, num2] : [num2, num1];
                 problem = `${larger} - ${smaller}`;
                 answer = larger - smaller;
                 break;
-            case 2: // Multiplication
+            }
+            case 2: {// Multiplication
                 problem = `${num1} × ${num2}`;
                 answer = num1 * num2;
                 break;
-            case 3: // Division
+            }
+            case 3: {// Division
                 // Ensure clean division by using multiplication in reverse
                 const result = random(1, 9);
                 const divisor = random(1, 9);
@@ -67,6 +67,7 @@ export class MathProblemManager {
                 problem = `${dividend} ÷ ${divisor}`;
                 answer = result;
                 break;
+            }
             default:
                 problem = `${num1} + ${num2}`;
                 answer = num1 + num2;
@@ -75,9 +76,9 @@ export class MathProblemManager {
         // Select random reward
         const rewardType = this.consumableItems[random(0, this.consumableItems.length - 1)];
         const rewardCount = this.getRewardCount(rewardType);
-        
+
         const problemId = this.nextProblemId++;
-        
+
         const mathProblem: MathProblem = {
             problem,
             answer,
@@ -90,17 +91,18 @@ export class MathProblemManager {
         return mathProblem;
     }
 
-    validateAnswer(player: Player, answer: number, problemId: number): boolean {
+    async validateAnswer(player: Player, answer: number, problemId: number): Promise<{ isCorrect: boolean; xpEarned: number }> {
         const activeProblem = this.activeProblem.get(player.id);
-        
+
         if (!activeProblem || activeProblem.problemId !== problemId) {
-            return false;
+            return { isCorrect: false, xpEarned: 0 };
         }
 
         const isCorrect = activeProblem.answer === answer;
-        
+        let xpAwarded = 0;
+
         if (isCorrect) {
-            // Award the player the consumable
+            // Award the player the consumable (existing loot system)
             const rewardType = activeProblem.rewardType;
             const currentAmount = player.inventory.items.getItem(rewardType);
             player.inventory.items.setItem(rewardType, currentAmount + activeProblem.rewardCount);
@@ -118,10 +120,31 @@ export class MathProblemManager {
                     console.log("Error equipping throwable:", e);
                 }
             }
-            
+
+            // Submit to TimeBack and award XP
+            try {
+                xpAwarded = await serverTimeBackAPI.submitMathProblemResult(player, {
+                    problem: activeProblem.problem,
+                    correctAnswer: activeProblem.answer,
+                    userAnswer: answer,
+                    isCorrect: true,
+                    operation: this.getOperationType(activeProblem.problem),
+                    rewardType: activeProblem.rewardType,
+                    rewardCount: activeProblem.rewardCount
+                });
+
+                // Track XP locally
+                player.timeBackXP += xpAwarded;
+
+                // TODO: Send XP notification to client
+                console.log(`${player.name} earned ${xpAwarded} TimeBack XP (total: ${player.timeBackXP})`);
+            } catch (error) {
+                console.warn(`TimeBack submission failed for ${player.name}:`, error);
+            }
+
             // Remove the problem and generate a new one
             this.activeProblem.delete(player.id);
-            
+
             // Send new problem immediately
             const newProblem = this.generateProblem(player);
             player.sendPacket(player.game.mathProblemPacket.create({
@@ -130,9 +153,33 @@ export class MathProblemManager {
                 rewardCount: newProblem.rewardCount,
                 problemId: newProblem.problemId
             }));
+        } else {
+            // Handle incorrect answer - still submit to TimeBack for analytics
+            try {
+                await serverTimeBackAPI.submitMathProblemResult(player, {
+                    problem: activeProblem.problem,
+                    correctAnswer: activeProblem.answer,
+                    userAnswer: answer,
+                    isCorrect: false,
+                    operation: this.getOperationType(activeProblem.problem),
+                    rewardType: activeProblem.rewardType,
+                    rewardCount: activeProblem.rewardCount
+                });
+            } catch (error) {
+                console.warn(`TimeBack submission failed for ${player.name}:`, error);
+            }
         }
-        
-        return isCorrect;
+
+        return { isCorrect, xpEarned: xpAwarded };
+    }
+
+    // Helper method to determine operation type from problem string
+    private getOperationType(problem: string): string {
+        if (problem.includes("+")) return "ADDITION";
+        if (problem.includes("-")) return "SUBTRACTION";
+        if (problem.includes("×")) return "MULTIPLICATION";
+        if (problem.includes("÷")) return "DIVISION";
+        return "UNKNOWN";
     }
 
     getCurrentProblem(player: Player): MathProblem | undefined {

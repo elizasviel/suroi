@@ -15,6 +15,10 @@ export interface JoinData {
     readonly badge?: BadgeDefinition
 
     readonly emotes: ReadonlyArray<EmoteDefinition | undefined>
+
+    // TimeBack authentication data
+    readonly authToken?: string
+    readonly studentId?: string
 }
 
 // protocol version is automatically set; use this type when
@@ -25,17 +29,19 @@ export const JoinPacket = new Packet<JoinPacketCreation, JoinData>(PacketType.Jo
     serialize(stream, data) {
         const emotes = data.emotes;
         const hasBadge = data.badge !== undefined;
+        const hasAuthToken = data.authToken !== undefined;
+        const hasStudentId = data.studentId !== undefined;
         stream.writeBooleanGroup2(
             data.isMobile,
             hasBadge,
+            hasAuthToken,
+            hasStudentId,
             emotes[0] !== undefined,
             emotes[1] !== undefined,
             emotes[2] !== undefined,
             emotes[3] !== undefined,
             emotes[4] !== undefined,
-            emotes[5] !== undefined,
-            emotes[6] !== undefined,
-            emotes[7] !== undefined
+            emotes[5] !== undefined
         );
 
         stream.writeUint16(GameConstants.protocolVersion);
@@ -47,7 +53,15 @@ export const JoinPacket = new Packet<JoinPacketCreation, JoinData>(PacketType.Jo
             Badges.writeToStream(stream, data.badge);
         }
 
-        for (let i = 0; i < 8; i++) {
+        if (hasAuthToken) {
+            stream.writeString(256, data.authToken); // Auth tokens can be long
+        }
+
+        if (hasStudentId) {
+            stream.writeString(64, data.studentId);
+        }
+
+        for (let i = 0; i < 6; i++) { // Reduced from 8 to 6 due to boolean group constraints
             const emote = emotes[i];
             if (emote === undefined) continue;
             Emotes.writeToStream(stream, emote);
@@ -58,6 +72,8 @@ export const JoinPacket = new Packet<JoinPacketCreation, JoinData>(PacketType.Jo
         const [
             isMobile,
             hasBadge,
+            hasAuthToken,
+            hasStudentId,
             ...emotes
         ] = stream.readBooleanGroup2();
         data.isMobile = isMobile;
@@ -71,8 +87,16 @@ export const JoinPacket = new Packet<JoinPacketCreation, JoinData>(PacketType.Jo
             data.badge = Badges.readFromStream(stream);
         }
 
+        if (hasAuthToken) {
+            data.authToken = stream.readString(256);
+        }
+
+        if (hasStudentId) {
+            data.studentId = stream.readString(64);
+        }
+
         data.emotes = new Array(8);
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < 6; i++) { // Reduced from 8 to 6 due to boolean group constraints
             if (!emotes[i]) continue;
             data.emotes[i] = Emotes.readFromStream(stream);
         }

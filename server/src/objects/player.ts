@@ -83,6 +83,11 @@ export class Player extends BaseGameObject.derive(ObjectCategory.Player) {
     name: string;
     readonly ip?: string;
 
+    // TimeBack authentication data
+    authToken?: string;
+    studentId?: string;
+    timeBackXP = 0;
+
     halloweenThrowableSkin = false;
     activeBloodthirstEffect = false;
     activeDisguise?: ObstacleDefinition;
@@ -2778,7 +2783,7 @@ export class Player extends BaseGameObject.derive(ObjectCategory.Player) {
 
             if (count > 0) {
                 if (def.noDrop || ("ephemeral" in def && def.ephemeral)) continue;
-                
+
                 // Skip consumables - they can only be obtained through math problems
                 if (MathProblemManager.isConsumable(item)) continue;
 

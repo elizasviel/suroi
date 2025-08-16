@@ -6,6 +6,7 @@ import { JoinedPacket } from "./joinedPacket";
 import { KillPacket } from "./killPacket";
 import { MapPacket } from "./mapPacket";
 import { MathAnswerPacket } from "./mathAnswerPacket";
+import { MathFeedbackPacket } from "./mathFeedbackPacket";
 import { MathProblemPacket } from "./mathProblemPacket";
 import { DataSplit, MutablePacketDataIn, PacketDataOut } from "./packet";
 import { PickupPacket } from "./pickupPacket";
@@ -25,7 +26,8 @@ export const Packets = [
     SpectatePacket,
     UpdatePacket,
     MathProblemPacket,
-    MathAnswerPacket
+    MathAnswerPacket,
+    MathFeedbackPacket
 ] as const;
 
 export class PacketStream {
@@ -54,7 +56,7 @@ export class PacketStream {
 
     getBuffer(): ArrayBuffer {
         // it is, in fact, a necessary type assertion; ts isn't happy without it
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+
         return this.stream.buffer.slice(0, this.stream.index) as ArrayBuffer;
     }
 }

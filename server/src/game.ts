@@ -52,6 +52,7 @@ import { Cache, getAllLoots, getSpawnableLoots, ItemRegistry } from "./utils/loo
 import { cleanUsername, modeFromMap } from "./utils/misc";
 import { MapIndicator } from "./objects/mapIndicator";
 import { MathProblemManager } from "./mathProblemManager";
+import { MathFeedbackPacket } from "@common/packets/mathFeedbackPacket";
 import { MathProblemPacket } from "@common/packets/mathProblemPacket";
 
 export class Game implements GameData {
@@ -63,6 +64,7 @@ export class Game implements GameData {
     readonly pluginManager = new PluginManager(this);
     readonly mathProblemManager = new MathProblemManager();
     readonly mathProblemPacket = MathProblemPacket;
+    readonly mathFeedbackPacket = MathFeedbackPacket;
 
     readonly modeName: ModeName;
     readonly mode: ModeDefinition;
@@ -303,8 +305,17 @@ export class Game implements GameData {
                 case PacketType.MathAnswer:
                     // Ignore math answer packets from players that haven't finished joining or dead players
                     if (!player.joined || player.dead) break;
-                    const isCorrect = this.mathProblemManager.validateAnswer(player, packet.answer, packet.problemId);
-                    // Could add feedback here if needed
+                    void this.mathProblemManager.validateAnswer(player, packet.answer, packet.problemId).then(result => {
+                        // Send feedback to client
+                        player.sendPacket(this.mathFeedbackPacket.create({
+                            isCorrect: result.isCorrect,
+                            problemId: packet.problemId,
+                            xpEarned: result.xpEarned > 0 ? result.xpEarned : undefined,
+                            totalXP: player.timeBackXP > 0 ? player.timeBackXP : undefined
+                        }));
+                    }).catch(error => {
+                        console.warn(`Math problem validation error for ${player.name}:`, error);
+                    });
                     break;
             }
         }
@@ -746,6 +757,15 @@ export class Game implements GameData {
         }
 
         player.name = cleanUsername(packet.name);
+
+        // Extract TimeBack authentication data
+        if (packet.authToken && packet.studentId) {
+            player.authToken = packet.authToken;
+            player.studentId = packet.studentId;
+            this.log(`Player ${player.name} authenticated with TimeBack (ID: ${packet.studentId.substring(0, 8)}...)`);
+        } else {
+            this.warn(`Player ${player.name} has no TimeBack authentication - math rewards will be local only`);
+        }
 
         player.isMobile = packet.isMobile;
         const skin = packet.skin;

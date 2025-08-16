@@ -185,7 +185,7 @@ class InputManagerClass {
     readonly binds = new InputMapper();
 
     readonly isMobile!: boolean;
-    
+
     isMathPanelFocused = false;
 
     readonly movement = {

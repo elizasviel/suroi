@@ -1,4 +1,4 @@
-import { GameConstants, InputActions, ObjectCategory } from "@common/constants";
+import { GameConstants, InputActions, Layer, ObjectCategory } from "@common/constants";
 import { DEFAULT_INVENTORY } from "@common/defaultInventory";
 import { type BadgeDefinition } from "@common/definitions/badges";
 import { getBadgeIdString, isEmoteBadge, type EmoteDefinition } from "@common/definitions/emotes";
@@ -1710,18 +1710,19 @@ class UIManagerClass {
         this.oldKillLeaderId = undefined;
         this.skinID = undefined;
     }
+
     showMathProblem(data: import("@common/packets/mathProblemPacket").MathProblemData): void {
         const questionElement = $("#math-problem-question");
         const rewardCountElement = $("#math-reward-count");
         const rewardImageElement = $("#math-reward-image");
-        const answerInput = $("#math-answer-input") as JQuery<HTMLInputElement>;
+        const answerInput = $("#math-answer-input");
         const submitButton = $("#math-submit-button");
         const panel = $("#math-problem-panel");
 
         // Update the problem display
         questionElement.text(data.problem);
         rewardCountElement.text(data.rewardCount.toString());
-        
+
         // Set the reward image based on the item type
         const rewardImagePath = this.getItemImagePath(data.rewardType);
         rewardImageElement.attr("src", rewardImagePath);
@@ -1741,12 +1742,12 @@ class UIManagerClass {
         const itemImageMap: Record<string, string> = {
             // Healing items
             "gauze": "./img/game/shared/loot/gauze.svg",
-            "medikit": "./img/game/shared/loot/medikit.svg", 
+            "medikit": "./img/game/shared/loot/medikit.svg",
             "cola": "./img/game/shared/loot/cola.svg",
             "tablets": "./img/game/shared/loot/tablets.svg",
             // Ammo types
             "12g": "./img/game/shared/loot/12g.svg",
-            "556mm": "./img/game/shared/loot/556mm.svg", 
+            "556mm": "./img/game/shared/loot/556mm.svg",
             "762mm": "./img/game/shared/loot/762mm.svg",
             "9mm": "./img/game/shared/loot/9mm.svg",
             // Throwables (stored in weapons folder)
@@ -1760,7 +1761,7 @@ class UIManagerClass {
     initializeMathProblemHandlers(): void {
         // Use setTimeout to ensure DOM is ready
         setTimeout(() => {
-            const answerInput = $("#math-answer-input") as JQuery<HTMLInputElement>;
+            const answerInput = $("#math-answer-input");
             const submitButton = $("#math-submit-button");
             const panel = $("#math-problem-panel");
 
@@ -1771,13 +1772,13 @@ class UIManagerClass {
             $(document).off("click.mathProblem");
 
             // Handle panel focus management
-            panel.on("click.mathProblem", (e) => {
+            panel.on("click.mathProblem", e => {
                 e.stopPropagation();
                 this.focusMathPanel();
             });
 
             // Handle clicking outside to unfocus
-            $(document).on("click.mathProblem", (e) => {
+            $(document).on("click.mathProblem", e => {
                 if (!panel.is(e.target) && panel.has(e.target as Element).length === 0) {
                     this.unfocusMathPanel();
                 }
@@ -1800,13 +1801,13 @@ class UIManagerClass {
             });
 
             // Handle submit button click
-            submitButton.on("click.mathProblem", (e) => {
+            submitButton.on("click.mathProblem", e => {
                 e.preventDefault();
                 this.submitMathAnswer();
             });
 
             // Handle Enter key in input field
-            answerInput.on("keypress.mathProblem", (e) => {
+            answerInput.on("keypress.mathProblem", e => {
                 if (e.which === 13) { // Enter key
                     e.preventDefault();
                     this.submitMathAnswer();
@@ -1814,7 +1815,7 @@ class UIManagerClass {
             });
 
             // Handle Escape key to unfocus
-            answerInput.on("keydown.mathProblem", (e) => {
+            answerInput.on("keydown.mathProblem", e => {
                 if (e.which === 27) { // Escape key
                     e.preventDefault();
                     this.unfocusMathPanel();
@@ -1825,8 +1826,8 @@ class UIManagerClass {
     }
 
     private focusMathPanel(): void {
-        const answerInput = $("#math-answer-input") as JQuery<HTMLInputElement>;
-        
+        const answerInput = $("#math-answer-input");
+
         // Simple focus without triggering events
         if (!answerInput.is(":focus")) {
             answerInput[0]?.focus();
@@ -1834,22 +1835,22 @@ class UIManagerClass {
     }
 
     private unfocusMathPanel(): void {
-        const answerInput = $("#math-answer-input") as JQuery<HTMLInputElement>;
-        
+        const answerInput = $("#math-answer-input");
+
         // Simple unfocus
         if (answerInput.is(":focus")) {
             answerInput[0]?.blur();
         }
-        
+
         InputManager.isMathPanelFocused = false;
         $("#math-problem-panel").removeClass("focused");
     }
 
     async submitMathAnswer(): Promise<void> {
-        const answerInput = $("#math-answer-input") as JQuery<HTMLInputElement>;
+        const answerInput = $("#math-answer-input");
         const panel = $("#math-problem-panel");
-        
-        const answer = parseInt(answerInput.val() as string);
+
+        const answer = parseInt(answerInput.val()!);
         const problemId = parseInt(panel.attr("data-problem-id") || "0");
 
         if (isNaN(answer)) {
@@ -1874,6 +1875,68 @@ class UIManagerClass {
 
         // Clear the input
         answerInput.val("");
+    }
+
+    handleMathFeedback(packet: { isCorrect: boolean; problemId: number; xpEarned?: number; totalXP?: number }): void {
+        // Visual feedback
+        const panel = $("#math-problem-panel");
+        const answerInput = $("#math-answer-input");
+        
+        if (packet.isCorrect) {
+            // Correct answer feedback
+            panel.addClass("correct-answer");
+            answerInput.css("border-color", "#28a745"); // Green border
+            
+            // Audio feedback - success sound
+            SoundManager.play("puzzle_solved", {
+                falloff: 1,
+                layer: Layer.Player,
+                maxRange: 48,
+                loop: false,
+                dynamic: false,
+                ambient: false
+            });
+            
+            // XP notification
+            if (packet.xpEarned && packet.xpEarned > 0) {
+                import("../timeBack/authUI").then(({ suroiAuthUI }) => {
+                    suroiAuthUI.showXPNotification(packet.xpEarned!);
+                    if (packet.totalXP) {
+                        suroiAuthUI.updateTotalXP(packet.totalXP);
+                    }
+                });
+            }
+            
+            // Remove visual feedback after short delay
+            setTimeout(() => {
+                panel.removeClass("correct-answer");
+                answerInput.css("border-color", "");
+            }, 1500);
+            
+        } else {
+            // Incorrect answer feedback
+            panel.addClass("incorrect-answer");
+            answerInput.css("border-color", "#dc3545"); // Red border
+            
+            // Audio feedback - error sound
+            SoundManager.play("puzzle_error", {
+                falloff: 1,
+                layer: Layer.Player,
+                maxRange: 48,
+                loop: false,
+                dynamic: false,
+                ambient: false
+            });
+            
+            // Shake animation for incorrect answer
+            panel.addClass("shake-animation");
+            
+            // Remove visual feedback after delay
+            setTimeout(() => {
+                panel.removeClass("incorrect-answer shake-animation");
+                answerInput.css("border-color", "");
+            }, 2000);
+        }
     }
 }
 
