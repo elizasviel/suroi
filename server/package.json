@@ -21,12 +21,12 @@
     "nodemon": "^3.1.10",
     "regenerator-runtime": "^0.14.1",
     "ts-node": "^10.9.2",
-    "tsc-alias": "^1.8.16",
-    "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.9.2"
+    "tsconfig-paths": "^4.2.0"
   },
   "dependencies": {
     "croner": "^9.1.0",
+    "tsc-alias": "^1.8.16",
+    "typescript": "^5.9.2",
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.52.0"
   }
 }
