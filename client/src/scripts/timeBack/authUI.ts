@@ -70,33 +70,50 @@ export class SuroiAuthUI {
     }
 
     private updateAuthUI(user: SuroiTimeBackUser | null): void {
-        this.hideAuthStatus();
-        this.hideAuthError();
+        try {
+            this.hideAuthStatus();
+            this.hideAuthError();
 
-        if (user) {
-            // User is authenticated - set auth data in Game
-            // Get the access token from auth manager
-            suroiAuthManager.getAccessToken().then(async accessToken => {
-                const { Game } = await import("../game");
-                Game.setTimeBackAuth(accessToken || undefined, user.sourcedId);
-            });
+            if (user) {
+                // User is authenticated - set auth data in Game
+                // Get the access token from auth manager
+                suroiAuthManager.getAccessToken().then(async accessToken => {
+                    try {
+                        const { Game } = await import("../game");
+                        Game.setTimeBackAuth(accessToken || undefined, user.sourcedId);
+                    } catch (error) {
+                        console.error("Error setting TimeBack auth in Game:", error);
+                    }
+                }).catch(error => {
+                    console.error("Error getting access token:", error);
+                });
 
-            // Update UI
-            $("#auth-user-details").html(`
-                <div><strong>${user.givenName} ${user.familyName}</strong></div>
-                <div style="color: #aaa;">${user.email}</div>
-                <div style="color: #aaa;">ID: ${user.sourcedId}</div>
-            `);
-            $("#auth-user-info").show();
-            $("#timeback-login").hide();
-        } else {
-            // User is not authenticated - clear auth data
-            import("../game").then(({ Game }) => {
-                Game.setTimeBackAuth(undefined, undefined);
-            });
+                // Update UI - use safer DOM manipulation
+                const userDetails = $("#auth-user-details");
+                userDetails.empty();
+                userDetails.append(`<div><strong>${this.escapeHtml(user.givenName)} ${this.escapeHtml(user.familyName)}</strong></div>`);
+                userDetails.append(`<div style="color: #aaa;">${this.escapeHtml(user.email)}</div>`);
+                userDetails.append(`<div style="color: #aaa;">ID: ${this.escapeHtml(user.sourcedId)}</div>`);
+                $("#auth-user-info").show();
+                $("#timeback-login").hide();
+            } else {
+                // User is not authenticated - clear auth data
+                import("../game").then(({ Game }) => {
+                    try {
+                        Game.setTimeBackAuth(undefined, undefined);
+                    } catch (error) {
+                        console.error("Error clearing TimeBack auth in Game:", error);
+                    }
+                }).catch(error => {
+                    console.error("Error importing Game module:", error);
+                });
 
-            $("#auth-user-info").hide();
-            $("#timeback-login").show();
+                $("#auth-user-info").hide();
+                $("#timeback-login").show();
+            }
+        } catch (error) {
+            console.error("Error updating auth UI:", error);
+            this.showAuthError("UI update failed. Please refresh the page.");
         }
     }
 
@@ -118,6 +135,12 @@ export class SuroiAuthUI {
 
     private hideAuthError(): void {
         $("#auth-error").hide();
+    }
+
+    private escapeHtml(text: string): string {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     // Public methods for game integration
