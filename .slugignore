@@ -31,7 +31,6 @@ spec/
 .env*
 .eslintrc*
 .prettierrc*
-tsconfig*.json
 vite.config*
 webpack.config*
 jest.config*
