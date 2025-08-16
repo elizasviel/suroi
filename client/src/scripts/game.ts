@@ -213,10 +213,12 @@ export const Game = new (class Game {
         InputManager.init();
         await setUpUI();
 
-        // Initialize TimeBack authentication
+        // Initialize TimeBack authentication - temporarily disabled for debugging React errors
         try {
-            const { suroiAuthUI } = await import("./timeBack/authUI");
-            await suroiAuthUI.initialize();
+            if (false) { // Disabled for now
+                const { suroiAuthUI } = await import("./timeBack/authUI");
+                await suroiAuthUI.initialize();
+            }
         } catch (error) {
             console.error("Error initializing TimeBack authentication:", error);
         }
