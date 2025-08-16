@@ -22,10 +22,10 @@ tests/
 __tests__/
 spec/
 
-# Source files (keep only built assets)
-client/src/
-server/src/
-common/src/
+# Source files (keep only built assets) - temporarily keep for build
+# client/src/
+# server/src/
+# common/src/
 
 # Development config
 .env*
