@@ -8,6 +8,12 @@ export const Config = {
             mainAddress: "http://127.0.0.1:8000",
             gameAddress: "ws://127.0.0.1:<gameID>",
             offset: 8001
+        },
+        heroku: {
+            name: "Heroku Server",
+            mainAddress: "https://mathroyale-0221891250e4.herokuapp.com",
+            gameAddress: "wss://mathroyale-0221891250e4.herokuapp.com/game/<gameID>",
+            offset: 1
         }/* ,
         na: {
             name: "North America",
@@ -52,7 +58,7 @@ export const Config = {
             offset: 1
         } */
     },
-    defaultRegion: "dev"
+    defaultRegion: "heroku"
 } satisfies ConfigType as ConfigType;
 
 export interface ConfigType {
